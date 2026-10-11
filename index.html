@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hardlife Sales Dashboard 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --white:#ffffff;
+    --paper:#f6f5f3;
+    --black:#161513;
+    --ink:#232220;
+    --orange:#e35205;
+    --orange-light:#ff8a3d;
+    --amber:#f0a830;
+    --grey:#7a7670;
+    --line:#e3e0da;
+    --line-dark:#33312d;
+    --good:#3a7d44;
+    --bad:#c0392b;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Barlow', sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    font-size:14px;
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{ font-family:'Barlow Condensed', sans-serif; font-weight:700; letter-spacing:0.2px; }
+  .app{ display:flex; min-height:100vh; }
+
+  .sidebar{
+    width:220px; flex:0 0 220px;
+    background:var(--black); color:var(--white);
+    display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh;
+  }
+  .brand{ padding:28px 22px 18px; border-bottom:1px solid var(--line-dark); }
+  .brand .mark{
+    display:inline-block; width:34px; height:34px; background:var(--orange);
+    clip-path: polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%);
+    margin-bottom:10px;
+  }
+  .brand h1{ font-size:22px; color:var(--white); line-height:1; text-transform:uppercase; }
+  .brand p{ font-size:11px; color:var(--grey); text-transform:uppercase; letter-spacing:1.2px; margin-top:4px; }
+
+  nav{ flex:1; padding:14px 10px; }
+  nav button{
+    display:flex; align-items:center; gap:10px; width:100%;
+    background:none; border:none; color:#cfcdc8; text-align:left;
+    font-family:'Barlow', sans-serif; font-size:14.5px; font-weight:600;
+    padding:11px 12px; margin-bottom:2px; cursor:pointer; border-radius:2px;
+    border-left:3px solid transparent;
+    transition:background .12s ease, color .12s ease, border-color .12s ease;
+  }
+  nav button .num{ font-family:'Barlow Condensed'; font-size:12px; color:var(--grey); border:1px solid var(--line-dark); border-radius:2px; padding:1px 6px; margin-left:auto; }
+  nav button:hover{ background:#221f1c; color:var(--white); }
+  nav button.active{ background:#221f1c; color:var(--white); border-left-color:var(--orange); }
+
+  .sidebar-foot{ padding:16px 22px 22px; border-top:1px solid var(--line-dark); }
+  .sidebar-foot button{
+    width:100%; background:var(--orange); color:var(--white); border:none;
+    font-family:'Barlow', sans-serif; font-weight:700; font-size:13px;
+    padding:10px 12px; cursor:pointer; letter-spacing:.3px;
+  }
+  .sidebar-foot button:hover{ background:var(--orange-light); }
+  .sidebar-foot input{ display:none; }
+  .sidebar-foot .fname{ font-size:11px; color:var(--grey); margin-top:8px; word-break:break-all; }
+
+  main{ flex:1; min-width:0; padding:26px 34px 60px; }
+  .topbar{ display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:20px; }
+  .topbar h2{ font-size:30px; text-transform:uppercase; }
+  .topbar .sub{ color:var(--grey); font-size:13px; margin-top:2px; }
+
+  .filters{
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    background:var(--white); border:1px solid var(--line); padding:12px 16px; margin-bottom:22px;
+  }
+  .chip-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .chip{
+    font-family:'Barlow Condensed'; font-size:14px; font-weight:700;
+    border:1px solid var(--line); background:var(--paper); color:var(--ink);
+    padding:5px 12px; cursor:pointer; user-select:none;
+  }
+  .chip.on{ background:var(--black); color:var(--white); border-color:var(--black); }
+  .chip.q{ border-color:var(--orange); }
+  .chip.q.on{ background:var(--orange); border-color:var(--orange); }
+  .seg{ display:flex; border:1px solid var(--line); }
+  .seg button{
+    font-family:'Barlow'; font-weight:600; font-size:12.5px; padding:7px 14px; background:var(--white); border:none; cursor:pointer; color:var(--ink);
+    border-right:1px solid var(--line);
+  }
+  .seg button:last-child{ border-right:none; }
+  .seg button.on{ background:var(--orange); color:var(--white); }
+  .filters .spacer{ flex:1; }
+  .filters .note{ font-size:11.5px; color:var(--grey); }
+
+  .grid{ display:grid; gap:16px; }
+  .g2{ grid-template-columns:1fr 1fr; }
+  .g3{ grid-template-columns:1fr 1fr 1fr; }
+  .g4{ grid-template-columns:repeat(4,1fr); }
+  @media (max-width:1100px){ .g2,.g3,.g4{ grid-template-columns:1fr 1fr; } }
+
+  .card{ background:var(--white); border:1px solid var(--line); padding:18px; }
+  .card h3{ font-size:16px; text-transform:uppercase; margin-bottom:2px; }
+  .card .cap{ font-size:11.5px; color:var(--grey); margin-bottom:14px; }
+  .card.tall canvas{ max-height:280px; }
+
+  .kpi{ background:var(--white); border:1px solid var(--line); border-top:4px solid var(--orange); padding:16px 18px; }
+  .kpi .label{ font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--grey); font-weight:600; }
+  .kpi .value{ font-family:'Barlow Condensed'; font-size:34px; font-weight:800; line-height:1.1; margin-top:4px; }
+  .kpi .delta{ font-size:12px; margin-top:4px; font-weight:600; }
+  .kpi .delta.pos{ color:var(--good); }
+  .kpi .delta.neg{ color:var(--bad); }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th{ text-align:left; font-family:'Barlow Condensed'; font-size:12.5px; text-transform:uppercase; letter-spacing:.3px; color:var(--grey); border-bottom:2px solid var(--black); padding:7px 8px; }
+  td{ padding:7px 8px; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  tr:hover td{ background:var(--paper); }
+  .num{ text-align:right; }
+  .tag{ display:inline-block; font-size:11px; padding:2px 7px; border:1px solid var(--line); font-weight:600; }
+  .tag.att{ border-color:var(--orange); color:var(--orange); }
+  .tag.util{ border-color:var(--amber); color:#a5751c; }
+
+  .empty{ color:var(--grey); font-size:13px; padding:20px; text-align:center; }
+  .section-title{ margin:28px 0 12px; font-size:20px; text-transform:uppercase; border-left:4px solid var(--orange); padding-left:10px; }
+  .tabpanel{ display:none; }
+  .tabpanel.active{ display:block; }
+  .scroll-x{ overflow-x:auto; }
+  footer.note{ margin-top:30px; font-size:11.5px; color:var(--grey); border-top:1px solid var(--line); padding-top:14px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="sidebar">
+    <div class="brand">
+      <span class="mark"></span>
+      <h1>Hardlife</h1>
+      <p>Sales Dashboard</p>
+    </div>
+    <nav id="nav">
+      <button data-tab="overview" class="active">Overview</button>
+      <button data-tab="segments">Segments</button>
+      <button data-tab="salespeople">Salespeople</button>
+      <button data-tab="uncaptured">Uncaptured Demand</button>
+      <button data-tab="quality">Quality</button>
+    </nav>
+    <div class="sidebar-foot">
+      <button type="button" id="uploadBtn">Upload updated file</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+      <div class="fname" id="fname">Built-in data · Jan – Oct 2026</div>
+    </div>
+  </div>
+
+  <main>
+    <div class="topbar">
+      <div>
+        <h2 id="pageTitle">Overview</h2>
+        <div class="sub" id="pageSub">Sales funnel, conversion and target performance</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="chip-row" id="monthChips"></div>
+      <div class="seg">
+        <button id="viewMonth" class="on">Monthly</button>
+        <button id="viewQuarter">Quarterly</button>
+      </div>
+      <div class="spacer"></div>
+    </div>
+
+    <div id="panels"></div>
+  </main>
+</div>
+
+<script>
+
+const RAW_DATA = {"Jan":{"full":"Jan 2026","quarter":"Q1","funnel":{"type_b":false,"monthly_target_orders":147,"enquiries":241,"quotes":236,"orders":85},"salesperson_rates":{"Soukaina":{"enq_to_quotes":null,"quotes_to_deals":null,"overall":null,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Chris":{"enq_to_quotes":0.9292929292929293,"quotes_to_deals":0.32608695652173914,"overall":0.30303030303030304,"gaps_enq_to_quote":7,"gaps_quote_to_order":62,"amount_wasted":245},"Owen":{"enq_to_quotes":0.9696969696969697,"quotes_to_deals":0.3125,"overall":0.30303030303030304,"gaps_enq_to_quote":1,"gaps_quote_to_order":22,"amount_wasted":35},"CJ":{"enq_to_quotes":1,"quotes_to_deals":0.3522727272727273,"overall":0.3522727272727273,"gaps_enq_to_quote":0,"gaps_quote_to_order":57,"amount_wasted":0}},"segment_table":{"Attachments":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":0,"value":0},"Chris":{"deals":23,"value":45928.78},"Owen":{"deals":8,"value":13487},"CJ":{"deals":28,"value":42814.9}},"Utility":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":1,"value":412.5},"Chris":{"deals":7,"value":44534},"Owen":{"deals":2,"value":6955},"CJ":{"deals":3,"value":5477.38}}},"uncaptured_demand":[{"date":"2026-01-02","enquiries":1,"salesperson":"Chris","product":"020-RRA","reason":null,"value":520},{"date":"2026-01-02","enquiries":1,"salesperson":"Chris","product":"010-UD-300","reason":null,"value":145},{"date":"2026-01-05","enquiries":1,"salesperson":"CJ","product":"010-TG","reason":null,"value":0},{"date":"2026-01-05","enquiries":1,"salesperson":"Chris","product":"020-TSH","reason":null,"value":0},{"date":"2026-01-05","enquiries":1,"salesperson":"Chris","product":"020-RRG","reason":null,"value":0},{"date":"2026-01-06","enquiries":1,"salesperson":"Chris","product":"020-RRA","reason":null,"value":0},{"date":"2026-01-07","enquiries":1,"salesperson":"Chris","product":"010-FM-600","reason":null,"value":0},{"date":"2026-01-07","enquiries":1,"salesperson":"Chris","product":"020-TG","reason":null,"value":0}],"quality_log":[{"date":"2026-01-05","order_no":"SO27529","salesperson":"CJ","product":"010-HRA-1200-75-WP30, 010-DT-900-WP30","issue":null,"complaints":0,"cancellation":"Yes","reason_category":"Other","accountability":null,"action_taken":"Refunded"},{"date":"2026-01-06","order_no":"Gaywood","salesperson":"Owen","product":"C3340","issue":null,"complaints":1,"cancellation":"No","reason_category":"Miscommunication","accountability":"Install Partners","action_taken":"TBC"},{"date":"2026-01-07","order_no":"SO27392","salesperson":"Owen","product":"Leg Pin","issue":null,"complaints":0,"cancellation":null,"reason_category":null,"accountability":null,"action_taken":null}]},"Mar":{"full":"March 2026","quarter":"Q1","funnel":{"type_b":false,"monthly_target_orders":154,"enquiries":243,"quotes":213,"orders":114},"salesperson_rates":{"Soukaina":{"enq_to_quotes":1,"quotes_to_deals":1.3333333333333333,"overall":1.3333333333333333,"gaps_enq_to_quote":0,"gaps_quote_to_order":-1,"amount_wasted":0},"Chris":{"enq_to_quotes":0.7363636363636363,"quotes_to_deals":0.6419753086419753,"overall":0.47272727272727266,"gaps_enq_to_quote":29,"gaps_quote_to_order":29,"amount_wasted":1015},"CJ":{"enq_to_quotes":1,"quotes_to_deals":0.4661016949152542,"overall":0.4661016949152542,"gaps_enq_to_quote":0,"gaps_quote_to_order":63,"amount_wasted":0},"Josh":{"enq_to_quotes":null,"quotes_to_deals":null,"overall":null,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0}},"segment_table":{"Attachments":{"Soukaina":{"deals":1,"value":6080},"Josh":{"deals":3,"value":2381.16},"Chris":{"deals":40,"value":49394.06},"CJ":{"deals":49,"value":52828.61}},"Utility":{"Soukaina":{"deals":3,"value":33921.75},"Josh":{"deals":0,"value":0},"Chris":{"deals":12,"value":40860.75},"CJ":{"deals":6,"value":13085}}},"uncaptured_demand":[{"date":"2026-03-02","enquiries":1,"salesperson":"Chris","product":"C2020","reason":null,"value":1250},{"date":"2026-03-02","enquiries":1,"salesperson":"Chris","product":"C2020H","reason":null,"value":1550},{"date":"2026-03-02","enquiries":1,"salesperson":"Chris","product":"020-RRG","reason":null,"value":3090},{"date":"2026-03-02","enquiries":1,"salesperson":"Chris","product":"060-TSH","reason":null,"value":2990},{"date":"2026-03-03","enquiries":1,"salesperson":"CJ","product":"040-FG","reason":null,"value":2990},{"date":"2026-03-03","enquiries":1,"salesperson":"CJ","product":"060-FG","reason":null,"value":3190},{"date":"2026-03-04","enquiries":1,"salesperson":"Chris","product":"020-TH-H","reason":null,"value":750},{"date":"2026-03-04","enquiries":1,"salesperson":"Chris","product":"010-RRA","reason":null,"value":450},{"date":"2026-03-05","enquiries":1,"salesperson":"CJ","product":"010-FM-600","reason":null,"value":1990},{"date":"2026-03-05","enquiries":1,"salesperson":"CJ","product":"020-MG","reason":null,"value":660},{"date":"2026-03-05","enquiries":1,"salesperson":"Chris","product":"C2020","reason":null,"value":1250},{"date":"2026-03-05","enquiries":1,"salesperson":"Chris","product":"100-FMH-R","reason":null,"value":6790},{"date":"2026-03-05","enquiries":1,"salesperson":"Chris","product":"010-TH-H","reason":null,"value":550},{"date":"2026-03-09","enquiries":1,"salesperson":"CJ","product":"060-TSH","reason":null,"value":2990},{"date":"2026-03-11","enquiries":1,"salesperson":"CJ","product":"C2020H","reason":null,"value":1550},{"date":"2026-03-12","enquiries":1,"salesperson":"CJ","product":"020-TH-H","reason":null,"value":750},{"date":"2026-03-12","enquiries":1,"salesperson":"Chris","product":"060-HT","reason":null,"value":1950},{"date":"2026-03-13","enquiries":1,"salesperson":"Chris","product":"060-HT","reason":null,"value":1950},{"date":"2026-03-14","enquiries":1,"salesperson":"Chris","product":"060-HT","reason":null,"value":1950},{"date":"2026-03-17","enquiries":2,"salesperson":"Chris","product":"060-TSH","reason":null,"value":2990},{"date":"2026-03-17","enquiries":0,"salesperson":"Chris","product":"100-SC","reason":null,"value":9490},{"date":"2026-03-18","enquiries":1,"salesperson":"CJ","product":"060-TSH","reason":null,"value":2990},{"date":"2026-03-18","enquiries":1,"salesperson":"Chris","product":"010-FM-600","reason":null,"value":1990},{"date":"2026-03-20","enquiries":2,"salesperson":"Chris","product":"50-100-23P","reason":null,"value":23990},{"date":"2026-03-20","enquiries":0,"salesperson":"Chris","product":"C2020H","reason":null,"value":1550},{"date":"2026-03-24","enquiries":1,"salesperson":"Chris","product":"C2620","reason":null,"value":1750},{"date":"2026-03-25","enquiries":1,"salesperson":"CJ","product":"060-TH-H","reason":null,"value":1150},{"date":"2026-03-25","enquiries":1,"salesperson":"Chris","product":"020-RRG","reason":null,"value":3090},{"date":"2026-03-30","enquiries":1,"salesperson":"CJ","product":"060-TH-H","reason":null,"value":1150},{"date":"2026-03-30","enquiries":1,"salesperson":"Chris","product":"060-TSH","reason":null,"value":2990},{"date":"2026-03-31","enquiries":3,"salesperson":"CJ","product":"010-DT","reason":null,"value":209},{"date":"2026-03-31","enquiries":0,"salesperson":"CJ","product":"010-TH-H","reason":null,"value":550},{"date":"2026-03-31","enquiries":0,"salesperson":"CJ","product":"020-MG","reason":null,"value":660},{"date":"2026-03-31","enquiries":1,"salesperson":"Chris","product":"020-RD-750","reason":null,"value":490}],"quality_log":[]},"Apr":{"full":"April 2026","quarter":"Q2","funnel":{"type_b":false,"monthly_target_orders":168,"enquiries":192,"quotes":171,"orders":78},"salesperson_rates":{"Soukaina":{"enq_to_quotes":1,"quotes_to_deals":0.6666666666666666,"overall":0.6666666666666666,"gaps_enq_to_quote":0,"gaps_quote_to_order":1,"amount_wasted":0},"Chris":{"enq_to_quotes":0.7684210526315789,"quotes_to_deals":0.3972602739726027,"overall":0.3052631578947368,"gaps_enq_to_quote":22,"gaps_quote_to_order":44,"amount_wasted":770},"CJ":{"enq_to_quotes":1,"quotes_to_deals":0.46808510638297873,"overall":0.46808510638297873,"gaps_enq_to_quote":0,"gaps_quote_to_order":50,"amount_wasted":0},"Josh":{"enq_to_quotes":null,"quotes_to_deals":null,"overall":null,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0}},"segment_table":{"Attachments":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":3,"value":816.9},"Chris":{"deals":24,"value":49448.58},"CJ":{"deals":37,"value":42009.23}},"Utility":{"Soukaina":{"deals":2,"value":5665},"Josh":{"deals":0,"value":0},"Chris":{"deals":5,"value":17759.38},"CJ":{"deals":7,"value":33029.14}}},"uncaptured_demand":[{"date":"2026-04-01","enquiries":1,"salesperson":"CJ","product":"040-FG","reason":null,"value":2990},{"date":"2026-04-02","enquiries":1,"salesperson":"Chris","product":"C2020","reason":null,"value":1250},{"date":"2026-04-08","enquiries":2,"salesperson":"Chris","product":"C2020H","reason":null,"value":1550},{"date":"2026-04-08","enquiries":0,"salesperson":"Chris","product":"50-100-23P","reason":null,"value":23990},{"date":"2026-04-13","enquiries":1,"salesperson":"Chris","product":"010-RRA","reason":null,"value":450},{"date":"2026-04-14","enquiries":1,"salesperson":"CJ","product":"020-MG","reason":null,"value":660},{"date":"2026-04-20","enquiries":2,"salesperson":"Chris","product":"LS4040","reason":null,"value":7990},{"date":"2026-04-20","enquiries":0,"salesperson":"Chris","product":"020-HRA-1300","reason":null,"value":590},{"date":"2026-04-21","enquiries":1,"salesperson":"Chris","product":"020-TH-H","reason":null,"value":750},{"date":"2026-04-27","enquiries":3,"salesperson":null,"product":"020-HRA-1300","reason":null,"value":590},{"date":"2026-04-27","enquiries":0,"salesperson":null,"product":"020-MG","reason":null,"value":660},{"date":"2026-04-27","enquiries":0,"salesperson":null,"product":"020-HT","reason":null,"value":1145}],"quality_log":[]},"Feb":{"full":"Feb 2026","quarter":"Q1","funnel":{"type_b":false,"monthly_target_orders":140,"enquiries":217,"quotes":192,"orders":92},"salesperson_rates":{"Soukaina":{"enq_to_quotes":null,"quotes_to_deals":null,"overall":null,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Chris":{"enq_to_quotes":0.7916666666666666,"quotes_to_deals":0.4,"overall":0.31666666666666665,"gaps_enq_to_quote":25,"gaps_quote_to_order":57,"amount_wasted":875},"Owen":{"enq_to_quotes":1,"quotes_to_deals":0.3333333333333333,"overall":0.3333333333333333,"gaps_enq_to_quote":0,"gaps_quote_to_order":18,"amount_wasted":0},"CJ":{"enq_to_quotes":1,"quotes_to_deals":0.6349206349206349,"overall":0.6349206349206349,"gaps_enq_to_quote":0,"gaps_quote_to_order":23,"amount_wasted":0}},"segment_table":{"Attachments":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":2,"value":720},"Chris":{"deals":29,"value":49147.52},"Owen":{"deals":7,"value":7315.5},"CJ":{"deals":32,"value":32244.25}},"Utility":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":0,"value":0},"Chris":{"deals":9,"value":42317.5},"Owen":{"deals":2,"value":10795},"CJ":{"deals":8,"value":126881.4}}},"uncaptured_demand":[],"quality_log":[]},"May":{"full":"May 2026","quarter":"Q2","funnel":{"type_b":false,"monthly_target_orders":168,"enquiries":179,"quotes":155,"orders":74},"salesperson_rates":{"Soukaina":{"enq_to_quotes":1,"quotes_to_deals":1,"overall":1,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Chris":{"enq_to_quotes":0.7073170731707317,"quotes_to_deals":0.6379310344827587,"overall":0.45121951219512196,"gaps_enq_to_quote":24,"gaps_quote_to_order":21,"amount_wasted":840},"CJ":{"enq_to_quotes":1,"quotes_to_deals":0.3541666666666667,"overall":0.3541666666666667,"gaps_enq_to_quote":0,"gaps_quote_to_order":62,"amount_wasted":0},"Josh":{"enq_to_quotes":null,"quotes_to_deals":null,"overall":null,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0}},"segment_table":{"Attachments":{"Soukaina":{"deals":1,"value":6080},"Josh":{"deals":1,"value":1060},"Chris":{"deals":31,"value":65517.91},"CJ":{"deals":26,"value":28869.62}},"Utility":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":1,"value":4087.5},"Chris":{"deals":6,"value":26725},"CJ":{"deals":8,"value":35880}}},"uncaptured_demand":[{"date":"2026-05-05","enquiries":1,"salesperson":"Chris","product":"020-HRA-1300","reason":null,"value":590},{"date":"2026-05-11","enquiries":1,"salesperson":"Chris","product":"020-TH-H","reason":null,"value":750},{"date":"2026-05-12","enquiries":1,"salesperson":"Chris","product":"020-HT","reason":null,"value":1145},{"date":"2026-05-26","enquiries":1,"salesperson":"Chris","product":"010-TG","reason":null,"value":1090},{"date":"2026-05-26","enquiries":1,"salesperson":"Chris","product":"020-HT","reason":null,"value":1145},{"date":"2026-05-26","enquiries":1,"salesperson":"Chris","product":"020-RRG","reason":null,"value":3090},{"date":"2026-05-26","enquiries":1,"salesperson":"CJ","product":"010-TG","reason":null,"value":1090},{"date":"2026-05-26","enquiries":1,"salesperson":"CJ","product":"020-TH-H","reason":null,"value":750},{"date":"2026-05-27","enquiries":1,"salesperson":"CJ","product":"010-TH-H","reason":null,"value":550},{"date":"2026-05-28","enquiries":1,"salesperson":"Chris","product":"EB20","reason":null,"value":1590}],"quality_log":[{"date":"2026-05-06","order_no":"28113","salesperson":"CJ","product":"100-TH-M","issue":null,"complaints":1,"cancellation":"Yes","reason_category":"Other","accountability":"Workshop","action_taken":null},{"date":"2026-05-06","order_no":"28468","salesperson":"CJ","product":"020-MG","issue":null,"complaints":1,"cancellation":"Yes","reason_category":"Other","accountability":"Workshop","action_taken":null},{"date":"2026-05-13","order_no":null,"salesperson":"Chris","product":null,"issue":null,"complaints":1,"cancellation":"No","reason_category":"Miscommunication","accountability":"Install Partners","action_taken":null},{"date":"2026-05-13","order_no":"28540","salesperson":"CJ","product":"060-FM-1500","issue":null,"complaints":1,"cancellation":"Yes","reason_category":"Other","accountability":"Workshop","action_taken":null},{"date":"2026-05-20","order_no":null,"salesperson":"Chris","product":"100-TSH","issue":"Worn Rotator","complaints":1,"cancellation":"No","reason_category":"Product fault","accountability":"Procurement","action_taken":null},{"date":"2026-05-26","order_no":"28534","salesperson":"CJ","product":"20-30-12","issue":null,"complaints":1,"cancellation":"Yes","reason_category":"Other","accountability":"Workshop","action_taken":null},{"date":"2026-05-28","order_no":null,"salesperson":"Chris","product":null,"issue":null,"complaints":1,"cancellation":"No","reason_category":"Staff discipline","accountability":"Workshop","action_taken":null},{"date":"2026-05-29","order_no":"28770","salesperson":"CJ","product":"20-30-12","issue":null,"complaints":1,"cancellation":"Yes","reason_category":"Other","accountability":"Workshop","action_taken":null}]},"Jun":{"full":"June 2026","quarter":"Q2","funnel":{"type_b":false,"monthly_target_orders":176,"enquiries":150,"quotes":131,"orders":95},"salesperson_rates":{"Soukaina":{"enq_to_quotes":1,"quotes_to_deals":1,"overall":1,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Chris":{"enq_to_quotes":0.8783783783783784,"quotes_to_deals":0.5384615384615384,"overall":0.47297297297297297,"gaps_enq_to_quote":9,"gaps_quote_to_order":30,"amount_wasted":315},"CJ":{"enq_to_quotes":1,"quotes_to_deals":0.9322033898305084,"overall":0.9322033898305084,"gaps_enq_to_quote":0,"gaps_quote_to_order":4,"amount_wasted":0},"Marcelo":{"enq_to_quotes":1,"quotes_to_deals":0.9322033898305084,"overall":0,"gaps_enq_to_quote":6,"gaps_quote_to_order":3,"amount_wasted":210},"Josh":{"enq_to_quotes":null,"quotes_to_deals":null,"overall":null,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0}},"segment_table":{"Attachments":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":4,"value":1015},"Chris":{"deals":26,"value":35924.23},"CJ":{"deals":48,"value":82719}},"Utility":{"Soukaina":{"deals":1,"value":1815},"Josh":{"deals":0,"value":0},"Chris":{"deals":9,"value":35827},"CJ":{"deals":7,"value":19619}}},"uncaptured_demand":[{"date":"2026-06-08","enquiries":1,"salesperson":"Soukaina","product":"010-RRA","reason":"OOS","value":450},{"date":"2026-06-11","enquiries":1,"salesperson":"Chris","product":"020-RRA","reason":"OOS","value":520},{"date":"2026-06-17","enquiries":1,"salesperson":"Chris","product":"020-HT","reason":"OOS","value":1145},{"date":"2026-06-18","enquiries":1,"salesperson":"Chris","product":"010-TH-H","reason":"OOS","value":550},{"date":"2026-06-22","enquiries":1,"salesperson":"Chris","product":"010-RRA","reason":"OOS","value":450},{"date":"2026-06-22","enquiries":1,"salesperson":"Chris","product":"060-TSH","reason":"OOS","value":2990},{"date":"2026-06-23","enquiries":1,"salesperson":"Chris","product":"010-DT","reason":"OOS","value":209},{"date":"2026-06-25","enquiries":1,"salesperson":"Chris","product":"060-SC","reason":"OOS","value":5990},{"date":"2026-06-26","enquiries":1,"salesperson":"Chris","product":"020-TG","reason":"OOS","value":1490},{"date":"2026-06-29","enquiries":1,"salesperson":"Chris","product":"020-HT","reason":"OOS","value":1145}],"quality_log":[{"date":"2026-06-02","order_no":"N/A","salesperson":"Chris","product":"Seal Kit","issue":"Robert Coles plant sales avaiting a callback from CB for a week regarding a seal kit","complaints":2,"cancellation":"N/A","reason_category":"Staff discipline","accountability":"Sales","action_taken":null},{"date":"2026-06-04","order_no":"SO27652","salesperson":"Chris","product":"010-FM","issue":"Peter Shoosmith called for several months on getting an update on his order from CB","complaints":1,"cancellation":"N/A","reason_category":"Staff discipline","accountability":"Sales","action_taken":"delivered, invoiced"},{"date":"2026-06-04","order_no":"SO27721","salesperson":"Chris","product":"060-UD-450","issue":"Bob Holmes Chasing his order after nio response from CB","complaints":1,"cancellation":"N/A","reason_category":"Staff discipline","accountability":"Sales","action_taken":"delivered, invoiced"},{"date":"2026-06-04","order_no":"SO28048","salesperson":"Chris","product":"010-FM","issue":"Waiting on an order from 11/5 to 4/6","complaints":1,"cancellation":"N/A","reason_category":"QC issue","accountability":"Workshop","action_taken":"delivered, invoiced"},{"date":"2026-06-04","order_no":"SO28901","salesperson":"Chris","product":"C2020H","issue":"No back panel was in the C2020H - was removed to fulfill old order","complaints":1,"cancellation":"N/A","reason_category":"QC issue","accountability":"Workshop","action_taken":"delivered, ongoing issue"},{"date":"2026-06-08","order_no":"SO28911","salesperson":"Chris","product":"Breaker Chisel","issue":"Was advised that the customer would receive on Friday,  nothing was sent","complaints":1,"cancellation":"Yes","reason_category":"Other","accountability":"Sales","action_taken":"cancelled"},{"date":"2026-06-09","order_no":"SO28888","salesperson":"CJ","product":"060-RRA","issue":"Missed Fast Track service - agreed to part refund the fast track service","complaints":1,"cancellation":"Part","reason_category":"QC issue","accountability":"Workshop","action_taken":"delivered, invoiced"},{"date":"2026-06-11","order_no":"Unknown","salesperson":"Chris","product":"Container Shelter","issue":"Had been chasing for a month on an update for an install that has gone wrong","complaints":1,"cancellation":"No","reason_category":"Staff discipline","accountability":"Sales","action_taken":null},{"date":"2026-06-12","order_no":"SO28577","salesperson":"Chris","product":"100-SC","issue":"Has chased multiple times for his screenign bucket - With no reponse","complaints":1,"cancellation":"No","reason_category":"Staff discipline","accountability":"Sales","action_taken":"delivered, ongoing issue"},{"date":"2026-06-12","order_no":"SO27969","salesperson":"Chris","product":"C4040S","issue":"Waiting on a part refund to be issued","complaints":1,"cancellation":"Part","reason_category":"Staff discipline","accountability":"Sales","action_taken":"Credit note raised"},{"date":"2026-06-16","order_no":"SO28830","salesperson":"CJ","product":"Pins","issue":"Josh delayed the production on a set of pins giving false ETAs to CJ resulting in the customer being angry when ETA's were not met","complaints":1,"cancellation":"No","reason_category":"Staff discipline","accountability":"Workshop","action_taken":"delivered, invoiced"},{"date":"2026-06-16","order_no":"SO28831","salesperson":"Chris","product":"060-RD","issue":"Apparently was advised order would be with him within couple of days","complaints":1,"cancellation":"No","reason_category":"Other","accountability":"Sales","action_taken":"delivered, invoiced"}]},"Jul":{"full":"July 2026","quarter":"Q3","funnel":{"type_b":true,"monthly_target_orders":207,"enquiries":159,"quotes":114,"orders":95},"salesperson_rates":{"Soukaina":{"enq_to_quotes":1,"quotes_to_deals":1,"overall":1,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Chris":{"enq_to_quotes":0.7162162162162162,"quotes_to_deals":0.7924528301886793,"overall":0.5675675675675677,"gaps_enq_to_quote":735,"gaps_quote_to_order":385,"amount_wasted":1120},"CJ":{"enq_to_quotes":1,"quotes_to_deals":1.069767441860465,"overall":1.069767441860465,"gaps_enq_to_quote":0,"gaps_quote_to_order":-105,"amount_wasted":-105},"Marcelo":{"enq_to_quotes":0.3684210526315789,"quotes_to_deals":0.21428571428571427,"overall":0.07894736842105263,"gaps_enq_to_quote":840,"gaps_quote_to_order":490,"amount_wasted":1330},"Josh":{"enq_to_quotes":1,"quotes_to_deals":1,"overall":1,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0}},"segment_table":{"Attachments":{"Soukaina":{"deals":1,"value":0},"Josh":{"deals":3,"value":0},"Chris":{"deals":37,"value":62832.2},"CJ":{"deals":36,"value":57407.2},"Marcelo":{"deals":0,"value":0}},"Utility":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":0,"value":0},"Chris":{"deals":5,"value":7460},"CJ":{"deals":10,"value":47730},"Marcelo":{"deals":3,"value":8257}}},"uncaptured_demand":[{"date":"2026-07-10","enquiries":1,"salesperson":"CJ","product":"200-SC","reason":"No Stock","value":11990},{"date":"2026-07-15","enquiries":1,"salesperson":"Chris","product":"010-RRA","reason":"No Stock","value":450},{"date":"2026-07-15","enquiries":1,"salesperson":"Chris","product":"040-TH-H","reason":"No Stock","value":890},{"date":"2026-07-21","enquiries":1,"salesperson":"Chris","product":"040-TH-H","reason":"No Stock","value":890},{"date":"2026-07-24","enquiries":1,"salesperson":"Chris","product":"010-UD-230","reason":"No Stock","value":130},{"date":"2026-07-24","enquiries":1,"salesperson":"Chris","product":"020-DT-900","reason":"No Stock","value":399},{"date":"2026-07-24","enquiries":1,"salesperson":"Chris","product":"100-FHM-1300-R","reason":"No Stock","value":7290}],"quality_log":[{"date":"2026-07-03","order_no":"SO29094","salesperson":"Chris","product":"020-TSH","issue":"Tree Shear in Poor Condition","complaints":1,"cancellation":null,"reason_category":"Product fault","accountability":"Workshop","action_taken":null},{"date":"2026-07-07","order_no":"SO26621","salesperson":"Chris","product":"100-TSH","issue":"Chasing update on his tree shear","complaints":1,"cancellation":null,"reason_category":"Other","accountability":"Workshop","action_taken":null},{"date":"2026-07-31","order_no":"SO25542","salesperson":"Chris","product":"020-FM-800","issue":"Repeated Breakages on his flail mower","complaints":1,"cancellation":"Yes","reason_category":"Product fault","accountability":"Workshop","action_taken":null},{"date":"2026-07-31","order_no":"SO2020","salesperson":"CJ","product":"020-TSH-R","issue":"No Pipes Supplied & headstock not painted","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"Workshop","action_taken":null},{"date":"2026-07-22","order_no":"SO28889","salesperson":"CJ","product":"020-FM-800","issue":"Lugs Broke Almost immediately - Too slow with responses from technical - Order Cancelled","complaints":1,"cancellation":"Yes","reason_category":"Product fault","accountability":null,"action_taken":null},{"date":"2026-07-27","order_no":"SO25643","salesperson":"Soukaina","product":"020-FM-800","issue":"Lug Issue - Keep breaking off","complaints":1,"cancellation":"Yes","reason_category":"Product fault","accountability":null,"action_taken":null},{"date":"2026-07-31","order_no":"SO26621","salesperson":"Chris","product":"100-TSH","issue":"Technical Dept isnt able to assume a repair timeframe","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"After-Sales","action_taken":null}]},"Aug":{"full":"August 2026","quarter":"Q3","funnel":{"type_b":true,"monthly_target_orders":180,"enquiries":127,"quotes":107,"orders":67},"salesperson_rates":{"Soukaina":{"enq_to_quotes":1,"quotes_to_deals":1,"overall":1,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Chris":{"enq_to_quotes":0.7272727272727273,"quotes_to_deals":0.3541666666666667,"overall":0.25757575757575757,"gaps_enq_to_quote":630,"gaps_quote_to_order":1085,"amount_wasted":1715},"CJ":{"enq_to_quotes":1,"quotes_to_deals":1.1025641025641026,"overall":1.1025641025641026,"gaps_enq_to_quote":0,"gaps_quote_to_order":-140,"amount_wasted":-140},"Marcelo":{"enq_to_quotes":0.8333333333333334,"quotes_to_deals":0.1,"overall":0.08333333333333334,"gaps_enq_to_quote":70,"gaps_quote_to_order":350,"amount_wasted":420},"Josh":{"enq_to_quotes":1,"quotes_to_deals":0.5555555555555556,"overall":0.5555555555555556,"gaps_enq_to_quote":0,"gaps_quote_to_order":140,"amount_wasted":140}},"segment_table":{"Attachments":{"Soukaina":{"deals":1,"value":6400},"Josh":{"deals":5,"value":324.1},"Chris":{"deals":14,"value":17755.94},"CJ":{"deals":34,"value":64245.79},"Marcelo":{"deals":0,"value":0}},"Utility":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":0,"value":0},"Chris":{"deals":3,"value":7162.5},"CJ":{"deals":9,"value":57925.75},"Marcelo":{"deals":1,"value":630}}},"uncaptured_demand":[{"date":"2026-08-03","enquiries":1,"salesperson":"CJ","product":"060-MG","reason":"OOS","value":1230},{"date":"2026-08-05","enquiries":1,"salesperson":"CJ","product":"020-HRA","reason":"OOS","value":590},{"date":"2026-08-06","enquiries":1,"salesperson":"CJ","product":"020-HRA","reason":"OOS","value":590},{"date":"2026-08-10","enquiries":1,"salesperson":"CJ","product":"020-HRA","reason":"OOS","value":590},{"date":"2026-08-10","enquiries":1,"salesperson":"Chris","product":"010-DT-900","reason":"OOS","value":209},{"date":"2026-08-11","enquiries":1,"salesperson":"Chris","product":"200-TH-H","reason":"OOS","value":2490},{"date":"2026-08-12","enquiries":1,"salesperson":"CJ","product":"200-RP","reason":"OOS","value":1350},{"date":"2026-08-13","enquiries":1,"salesperson":"CJ","product":"C2040H - GY1","reason":"OOS","value":2350},{"date":"2026-08-18","enquiries":1,"salesperson":"CJ","product":"060-MG","reason":"OOS","value":1230},{"date":"2026-08-20","enquiries":1,"salesperson":"CJ","product":"040-MG","reason":"OOS","value":790},{"date":"2026-08-20","enquiries":1,"salesperson":"Chris","product":"020-TH-H","reason":"OOS","value":750},{"date":"2026-08-24","enquiries":1,"salesperson":"CJ","product":"040-TH-H","reason":"OOS","value":890},{"date":"2026-08-24","enquiries":1,"salesperson":"Chris","product":"20-30-12","reason":"OOS","value":1990},{"date":"2026-08-24","enquiries":1,"salesperson":"Chris","product":"100-RD","reason":"OOS","value":1990},{"date":"2026-08-27","enquiries":1,"salesperson":"Chris","product":"100-TH-H","reason":"OOS","value":1890},{"date":"2026-08-27","enquiries":1,"salesperson":"Chris","product":"100-RRA","reason":"OOS","value":1650}],"quality_log":[{"date":"2026-08-04","order_no":"SO28724","salesperson":"Josh","product":"040-TH-H Cylinder + Pad & Pin","issue":"Welding splatter, paintworketc all not satisfactory as per photos sent","complaints":1,"cancellation":"Yes","reason_category":"QC issue","accountability":"Workshop","action_taken":null},{"date":"2026-08-05","order_no":"SO29020","salesperson":"CJ","product":"020-TSH-R","issue":"Order sent missing hoses, headstock wasnt pained and all bolts and washers were broken and bolt holes were too large","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"Workshop","action_taken":"Organised collection of Treeshear to have full rework done and qc tested before sending back out ASAP"},{"date":"2026-08-05","order_no":"SO29282","salesperson":"Chris","product":"020-FM","issue":"Customer received no confirmation of order, had no updates from Chris despite multiple callback requests","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"Sales","action_taken":"No callback From Chris + Payment not been logged against the the order"},{"date":"2026-08-05","order_no":"SO29266","salesperson":"Chris","product":"020-FM","issue":"Customer received no confirmation of order, had no updates from Chris despite multiple callback requests","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"Sales","action_taken":"No callback From Chris"},{"date":"2026-08-05","order_no":"SO26621","salesperson":"Chris","product":"100-TSH","issue":"Technical Dept isnt able to assume a repair timeframe","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"After-Sales","action_taken":"Fixed by CJ/SR"},{"date":"2026-08-05","order_no":"SO29014","salesperson":"CJ","product":"060-TSH + Panel Fabric + Flail Parts","issue":"Order Taking too Long - Customer Threatening to cancel","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"Workshop","action_taken":"Repeated daily chasing by CJ Order taken 20/07 - CJ Chased on 3 occasions since, parts still not cut on 060-TSH as of 05/08 - CJ asked for this to be completed by end of the week as the rest of the order is pick and pack - Order sent 07/08"},{"date":"2026-08-10","order_no":"SO28277","salesperson":"CJ","product":"020-RRA","issue":"Order took too long","complaints":0,"cancellation":"Yes","reason_category":"Stock availability","accountability":"Procurement","action_taken":"Customer Refunded 10/08"},{"date":"2026-08-10","order_no":"SO29066","salesperson":"CJ","product":"020-PF","issue":"Reworked Pallet Forks are still not the correct size dimensions","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"Workshop","action_taken":"A second rework will need to be completed - escalated to Scott and Soukaia"},{"date":"2026-08-10","order_no":"SO29417","salesperson":"Chris","product":"040-HRA","issue":"Customer received no confirmation of order, had no updates from Chris despite multiple callback requests","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"Sales","action_taken":"No callback From Chris"},{"date":"2026-08-11","order_no":"SO28783","salesperson":"CJ","product":"C2040 With Front and Back Panels","issue":"Customer Ordered Grey 2040 + Front and back (Shown available on Odoo), had to be changed to green due to lack of stock as notified by Scott (Shown available on Odoo), then green was also not available however we did have a grey roof fabric(Shown Available on Odoo), we would send the green roof + grey roof fabric and white front and back panels. Customer Agreed to this. Then upon arrival, Jake has confirmed that the grey roof fabric is the wrong size and will not fit needing a further return to site to fit the correct roof fabric.","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"Workshop","action_taken":"CJ has asked Jake for costs of Jake to revisit and fit the correct fabric once found"},{"date":"2026-08-11","order_no":"SO29460","salesperson":"CJ","product":"2040H + Front Panel","issue":"Customer has to chase 3 times and for the chase to be escalated to Soukaina both by CJ and the customer before the site manager would confirm stock availability due to him being busy","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"Workshop","action_taken":"Soukaina has managed to get the Scott to confirm availability to assist CJ  to sell an option to the customer, the customer has proceeded to order upon confirmation of stock availability"},{"date":"2026-08-12","order_no":"SO25971","salesperson":"Soukaina","product":"010-TH-H","issue":"Supplies 2 units, seals and rams, 010-TH-H is still leaking","complaints":1,"cancellation":null,"reason_category":"Product fault","accountability":"Procurement","action_taken":"Customer is happy to wait up to 6 months for the new units - follow up check in's to take place monthly"},{"date":"2026-08-12","order_no":"SO29253","salesperson":"CJ","product":"200-RP","issue":"System incorrect with stock quantities resulting in a cancelled and refunded order","complaints":1,"cancellation":null,"reason_category":"Miscommunication","accountability":"Sales","action_taken":"Customer still making decision whether to go with 150-RP or refund"},{"date":"2026-08-13","order_no":"SO28964","salesperson":"CJ","product":"040-SC","issue":"Product returned for repair, no reply from Josh on muliple attempts for an update, customer fursious wants full refund","complaints":1,"cancellation":"Yes","reason_category":"Staff discipline","accountability":"After-Sales","action_taken":"Soukaina has agreed with the customer for a full refund to be issued due to lack of support provided by Josh"},{"date":"2026-08-13","order_no":"SO29417","salesperson":"Chris","product":"040-HRA","issue":"Customer was promised a callback yesterday however no response was made - customer ready to cancel order if no update is given","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"After-Sales","action_taken":"Blake advises this was complete at 10:30am gave Chris the paperwork and Chris said \"This may not go today as the customer hasnt called me back\" CJ has called the customer and confirmed this is ready to collect 11:30am"},{"date":"2026-08-13","order_no":"SO29392","salesperson":"CJ","product":"100-TH-M","issue":"Order Taking too Long - Customer Threatening to cancel","complaints":1,"cancellation":"Yes","reason_category":"Stock availability","accountability":"Sales","action_taken":"CJ Organised with Brightwells and DND for collection of 100-TH-M 14/08 for delivery 17/08 with a £100 refund as well (Approved by SR)"},{"date":"2026-08-14","order_no":"SO29265","salesperson":"Chris","product":"010-FM","issue":"Order over a month old, waiting over a week for a callback from Chris with a status update on his order","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"After-Sales","action_taken":"CJ Left Message for Chris to call customer back 13:30pm 14/08 - Chris called back at 15:55pm to say there is no update"},{"date":"2026-08-14","order_no":"SO29020","salesperson":"CJ","product":"020-TSH-R","issue":"Order has been with workshop for a week - waited several days for bolts to arrive so headstock could be mounted to the rotator due to lack of organisation","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"Workshop","action_taken":"Bolts arrived 13:45pm, a same day courier was booked by CJ (Approved by SR - PO05226) to ensure the customer had this back to him by the weekend ready for use. The pipes have already been sent to the customer this week and customer has confirmed that they are there."},{"date":"2026-08-14","order_no":"SO29130","salesperson":"Chris","product":"010-BR-EB07","issue":"Order is 1 month overdue and parts are unable to be located","complaints":1,"cancellation":null,"reason_category":"Stock availability","accountability":"Workshop","action_taken":"CB Speaking to Scott regarding finding location of the EB07"},{"date":"2026-08-17","order_no":"SO28724","salesperson":"Josh","product":"040-TH-H Cylinder + Pad & Pin","issue":"Waiting on a response for the 040-TH-H - no one has contacted him back","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"After-Sales","action_taken":"Josh has been notified to contact the customer ASAP"},{"date":"2026-08-18","order_no":"SO29294","salesperson":"CJ","product":"010-FM","issue":"Customer believes product isnt fit for purpose after waiting a month to receive his order - customer wants refund","complaints":1,"cancellation":null,"reason_category":"Product fault","accountability":"Procurement","action_taken":"Josh has been notified to contact the customer ASAP to gain a technical review before hopefully resolving without the need for refunds"},{"date":"2026-08-19","order_no":"SO29282","salesperson":"Chris","product":"020-FM","issue":"Customer received no confirmation of order, had no updates from Chris despite multiple callback requests","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"After-Sales","action_taken":"No callback From Chris + Payment not been logged against the the order"},{"date":"2026-08-26","order_no":"SO29130","salesperson":"Chris","product":"010-BR-EB07","issue":"Parts Missing from Breaker","complaints":1,"cancellation":null,"reason_category":"Product fault","accountability":"Workshop","action_taken":null},{"date":"2026-08-28","order_no":"SO29364","salesperson":"Chris","product":"020-MG","issue":"Arm Missing From 020-MG - customer was advised he would get a call back by Chris and no call back was ever made - he has had the grapple 3 weeks with no ability to use it","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"After-Sales","action_taken":"CJ has picked this up and asked for photos to be sent showing the missing arm and will speak to warehouse to see if we can issue a new one out asap to the customer"},{"date":"2026-08-28","order_no":"SO29386","salesperson":"Chris","product":"100-ERG","issue":"Hoses too short for the machine - customer advised this to CB several days ago - waiting on a callback which was never received","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"After-Sales","action_taken":"CJ Picking this up and speaking to Josh to organise in Chris' absence"},{"date":"2026-08-28","order_no":"SO29282","salesperson":"Chris","product":"020-FM","issue":"Customer received no confirmation of order, had no updates from Chris despite multiple callback requests and emails chasing for an update to whats going on with the order","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"After-Sales","action_taken":"No callback From Chris + Payment not been logged against the the order"}]},"Sep":{"full":"September 2026","quarter":"Q3","funnel":{"type_b":true,"monthly_target_orders":198,"enquiries":132,"quotes":118,"orders":90},"salesperson_rates":{"Soukaina":{"enq_to_quotes":1,"quotes_to_deals":0,"overall":0,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Chris":{"enq_to_quotes":0.72,"quotes_to_deals":0.7222222222222222,"overall":0.52,"gaps_enq_to_quote":490,"gaps_quote_to_order":350,"amount_wasted":840},"CJ":{"enq_to_quotes":1,"quotes_to_deals":0.8266666666666667,"overall":0.8266666666666667,"gaps_enq_to_quote":0,"gaps_quote_to_order":455,"amount_wasted":455},"Marcelo":{"enq_to_quotes":null,"quotes_to_deals":null,"overall":null,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Josh":{"enq_to_quotes":1,"quotes_to_deals":0.3333333333333333,"overall":0.3333333333333333,"gaps_enq_to_quote":0,"gaps_quote_to_order":140,"amount_wasted":140}},"segment_table":{"Attachments":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":1,"value":361.67},"Chris":{"deals":23,"value":28709.35},"CJ":{"deals":47,"value":102233},"Marcelo":{"deals":0,"value":0}},"Utility":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":1,"value":2250},"Chris":{"deals":3,"value":7747.5},"CJ":{"deals":15,"value":47986},"Marcelo":{"deals":0,"value":0}}},"uncaptured_demand":[{"date":"2026-09-03","enquiries":1,"salesperson":"CJ","product":"010-TH-H","reason":"OOS","value":550},{"date":"2026-09-02","enquiries":1,"salesperson":"Chris","product":"33-40-17","reason":"OOS","value":5790},{"date":"2026-09-03","enquiries":1,"salesperson":"CJ","product":"010-TH-H","reason":"OOS","value":550},{"date":"2026-09-10","enquiries":1,"salesperson":"CJ","product":"020-BR-SB20C","reason":"OOS","value":1850},{"date":"2026-09-14","enquiries":1,"salesperson":"CJ","product":"020-RP","reason":"OOS","value":365},{"date":"2026-09-14","enquiries":1,"salesperson":"Chris","product":"100-RRA-1800","reason":"OOS","value":1650},{"date":"2026-09-28","enquiries":1,"salesperson":"CJ","product":"010-FM","reason":"OOS","value":1990}],"quality_log":[{"date":"2026-09-03","order_no":"SO28187","salesperson":"Chris","product":"Shipping","issue":"Customer said it was about us having to pay fedex £143.45 for shipping from Germany (dropship) - Import VAT/Duty","complaints":1,"cancellation":null,"reason_category":null,"accountability":null,"action_taken":"Confirmed with Josh that it was Import VAT/Duty and Soukaina approved for Hardlife to pay £143.45"},{"date":"2026-09-10","order_no":"SO29329","salesperson":"Chris","product":"100-TSH-R","issue":"Order outstanding since July, customer repeatedly told \"it'll be out next week\" however it never materialises - customer either wants a concrete answer or wants a refund","complaints":1,"cancellation":null,"reason_category":null,"accountability":null,"action_taken":"CJ has picked this up as Chris is off 10/09 - CJ confirmed with Tom dispatch will be made by the latest of 16/09 - Blake confirmed this is actively being worked on and gave this date - customer satisfied"},{"date":"2026-09-14","order_no":"SO28813","salesperson":"Chris","product":"C2040","issue":"Missing fabric","complaints":1,"cancellation":null,"reason_category":null,"accountability":null,"action_taken":null},{"date":"2026-09-21","order_no":"SO29472","salesperson":"CJ","product":"SB20C","issue":"Odoo Miscount resulting in no stock and overselling to the customer","complaints":0,"cancellation":"Yes","reason_category":"Stock availability","accountability":"Procurement","action_taken":"CJ has agreed for refund to be issued"},{"date":"2026-09-22","order_no":"SO29542","salesperson":"CJ","product":"020-UD-600","issue":"Bucket supposed to have no teeth - teeth were provided, also pins were supposed to be direct mount - we supplied welded pin","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"Workshop","action_taken":"CJ Organised RTS for rework 22/09"},{"date":"2026-09-22","order_no":"SO29652","salesperson":"Chris","product":"020-FM-800","issue":"Wrong pin dimensions on headstock","complaints":1,"cancellation":null,"reason_category":"QC issue","accountability":"Workshop","action_taken":"CJ Organised RTS for rework 22/09"},{"date":"2026-09-22","order_no":"SO29130","salesperson":"Chris","product":"EB07 Breaker","issue":"EB7 sold \"with scuffs\" - looked used, all parts were used \r\nagreed for partial refund and missing parts would be sent asap\r\nStill missing parts since July","complaints":1,"cancellation":null,"reason_category":"Product fault","accountability":"After-Sales","action_taken":"CJ sent parts list to customer to obtain part code for Josh to locate on the EB7 we have at MK1"},{"date":"2026-09-22","order_no":"SO27639","salesperson":"Chris","product":"C20-PNL-WO-PVC900-GY1","issue":"Customer was not made aware that this item is out of stock, this was confirmed on Friday however no attempt to contact the customer was made - Order has been confirmed since end of August","complaints":1,"cancellation":null,"reason_category":"Staff discipline","accountability":"Sales","action_taken":"CJ has organised for a C20 back panel in green to be sent and a part refund of the difference to be issued back to the customer - customer has agreed, booked for dispatch 23/09"}]},"Oct":{"full":"October 2026","quarter":"Q4","funnel":{"type_b":true,"monthly_target_orders":210,"enquiries":62,"quotes":54,"orders":35},"salesperson_rates":{"Soukaina":{"enq_to_quotes":1,"quotes_to_deals":0,"overall":0,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Chris":{"enq_to_quotes":0.5555555555555556,"quotes_to_deals":0.2,"overall":0.11111111111111112,"gaps_enq_to_quote":280,"gaps_quote_to_order":280,"amount_wasted":560},"CJ":{"enq_to_quotes":1,"quotes_to_deals":0.8157894736842105,"overall":0.8157894736842105,"gaps_enq_to_quote":0,"gaps_quote_to_order":245,"amount_wasted":245},"Marcelo":{"enq_to_quotes":null,"quotes_to_deals":null,"overall":null,"gaps_enq_to_quote":0,"gaps_quote_to_order":0,"amount_wasted":0},"Josh":{"enq_to_quotes":1,"quotes_to_deals":0.5,"overall":0.5,"gaps_enq_to_quote":0,"gaps_quote_to_order":70,"amount_wasted":70}},"segment_table":{"Attachments":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":2,"value":0},"Chris":{"deals":2,"value":0},"CJ":{"deals":25,"value":0},"Marcelo":{"deals":0,"value":0}},"Utility":{"Soukaina":{"deals":0,"value":0},"Josh":{"deals":0,"value":0},"Chris":{"deals":0,"value":0},"CJ":{"deals":6,"value":0},"Marcelo":{"deals":0,"value":0}}},"uncaptured_demand":[{"date":"2026-10-02","enquiries":1,"salesperson":"CJ","product":"C20-PNL-BO","reason":"OOS","value":700},{"date":"2026-10-02","enquiries":2,"salesperson":"CJ","product":"C2040","reason":"OOS","value":3900},{"date":"2026-10-07","enquiries":3,"salesperson":"CJ","product":"C2620","reason":"OOS","value":5250},{"date":"2026-10-05","enquiries":1,"salesperson":"Chris","product":"020-HRA-1300","reason":"OOS","value":590}],"quality_log":[{"date":"2026-10-07","order_no":"29811","salesperson":"CJ","product":"060-TH-H","issue":"Customer not happy with product quality","complaints":1,"cancellation":null,"reason_category":"Product fault","accountability":"Workshop","action_taken":"Chris has requested Photos of the product to assess the quality in house before commenting"}]}};
+const MONTHS_ALL = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const FULL_NAME = {Jan:'January',Feb:'February',Mar:'March',Apr:'April',May:'May',Jun:'June',Jul:'July',Aug:'August',Sep:'September',Oct:'October',Nov:'November',Dec:'December'};
+function monthIndex(m){ return MONTHS_ALL.indexOf(m); }
+function quarterOf(m){ return 'Q' + (Math.floor(monthIndex(m)/3)+1); }
+
+let DATA = JSON.parse(JSON.stringify(RAW_DATA));
+
+const COLORS = { orange:'#e35205', orangeLight:'#ff8a3d', amber:'#f0a830', black:'#161513', grey:'#7a7670', good:'#3a7d44', bad:'#c0392b' };
+const PALETTE = [COLORS.orange, COLORS.black, COLORS.amber, '#8a5a2b', COLORS.grey, COLORS.bad, COLORS.good, COLORS.orangeLight];
+// Distinct, clearly-differentiable palette for per-person charts (not constrained to the brand 3-colour scheme)
+const PEOPLE_PALETTE = ['#2c6e8a', '#e35205', '#3a7d44', '#7a4fa3', '#c0392b', '#c9a227', '#1b8f8f', '#5b5852'];
+
+function availableMonths(){ return Object.keys(DATA).sort((a,b)=>monthIndex(a)-monthIndex(b)); }
+
+const state = { months: new Set(availableMonths()), granularity:'month', tab:'overview' };
+
+function fmtGBP(v){ if(v==null||isNaN(v)) return '£0'; return '£' + Math.round(v).toLocaleString('en-GB'); }
+function fmtNum(v){ if(v==null||isNaN(v)) return '0'; return Math.round(v).toLocaleString('en-GB'); }
+function fmtPct(v){ if(v==null||isNaN(v)) return '—'; return (v*100).toFixed(1)+'%'; }
+function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
+function safeDiv(a,b){ return b ? a/b : null; }
+
+function selectedMonthsSorted(){
+  return availableMonths().filter(m=>state.months.has(m));
+}
+function getGroups(){
+  const months = selectedMonthsSorted();
+  if(state.granularity==='month'){
+    return months.map(m=>({label:m, months:[m]}));
+  }
+  const byQ = {};
+  months.forEach(m=>{ const q=quarterOf(m); (byQ[q]=byQ[q]||[]).push(m); });
+  return Object.keys(byQ).sort().map(q=>({label:q, months:byQ[q]}));
+}
+
+function aggFunnel(months){
+  let e=0,q=0,o=0,t=0;
+  months.forEach(m=>{ const f=DATA[m].funnel; e+=f.enquiries||0; q+=f.quotes||0; o+=f.orders||0; t+=f.monthly_target_orders||0; });
+  return { enquiries:e, quotes:q, orders:o, target:t,
+    enqToQuote: safeDiv(q,e), quoteToOrder: safeDiv(o,q), overall: safeDiv(o,e) };
+}
+function aggSegment(months){
+  const out = { Attachments:{deals:0,value:0}, Utility:{deals:0,value:0} };
+  months.forEach(m=>{
+    const st = DATA[m].segment_table || {};
+    Object.keys(st).forEach(seg=>{
+      if(!out[seg]) out[seg] = {deals:0,value:0};
+      Object.values(st[seg]).forEach(p=>{ out[seg].deals += p.deals||0; out[seg].value += p.value||0; });
+    });
+  });
+  return out;
+}
+function aggSegmentByPerson(months){
+  const out = {};
+  months.forEach(m=>{
+    const st = DATA[m].segment_table || {};
+    Object.keys(st).forEach(seg=>{
+      Object.entries(st[seg]).forEach(([person,v])=>{
+        out[person] = out[person] || {Attachments:{deals:0,value:0}, Utility:{deals:0,value:0}};
+        if(!out[person][seg]) out[person][seg] = {deals:0,value:0};
+        out[person][seg].deals += v.deals||0;
+        out[person][seg].value += v.value||0;
+      });
+    });
+  });
+  return out;
+}
+function aggSalespeople(months){
+  const out = {};
+  months.forEach(m=>{
+    const sr = DATA[m].salesperson_rates || {};
+    Object.entries(sr).forEach(([person,v])=>{
+      out[person] = out[person] || { enq:[], quo:[], ovr:[], gapsEQ:0, gapsQO:0, wasted:0 };
+      if(v.enq_to_quotes!=null) out[person].enq.push(v.enq_to_quotes);
+      if(v.quotes_to_deals!=null) out[person].quo.push(v.quotes_to_deals);
+      if(v.overall!=null) out[person].ovr.push(v.overall);
+      out[person].gapsEQ += v.gaps_enq_to_quote||0;
+      out[person].gapsQO += v.gaps_quote_to_order||0;
+      out[person].wasted += v.amount_wasted||0;
+    });
+  });
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+  Object.keys(out).forEach(p=>{
+    out[p].enqToQuoteAvg = avg(out[p].enq);
+    out[p].quoteToOrderAvg = avg(out[p].quo);
+    out[p].overallAvg = avg(out[p].ovr);
+  });
+  return out;
+}
+function aggUncaptured(months){
+  let rows = [];
+  months.forEach(m => rows = rows.concat((DATA[m].uncaptured_demand||[]).map(r=>({...r, month:m}))));
+  const byPerson = {}, byReason = {};
+  let totalCount = 0;
+  rows.forEach(r=>{
+    const n = (r.enquiries==null) ? 1 : r.enquiries;
+    totalCount += n;
+    const p = r.salesperson || 'Not stated';
+    byPerson[p] = byPerson[p] || {count:0, value:0};
+    byPerson[p].count += n; byPerson[p].value += r.value||0;
+    const rs = r.reason || 'Not stated';
+    byReason[rs] = byReason[rs] || {count:0, value:0};
+    byReason[rs].count += n; byReason[rs].value += r.value||0;
+  });
+  return { rows, byPerson, byReason, totalCount, totalValue: rows.reduce((a,r)=>a+(r.value||0),0) };
+}
+function aggQuality(months){
+  let rows = [];
+  months.forEach(m => rows = rows.concat((DATA[m].quality_log||[]).map(r=>({...r, month:m}))));
+  const byReason = {}, byAccountability = {};
+  let complaints=0, cancellations=0;
+  rows.forEach(r=>{
+    complaints += r.complaints||0;
+    const cv=(r.cancellation||'').toString().toLowerCase(); if(cv==='yes'||cv==='part') cancellations++;
+    const rc = r.reason_category || 'Not stated';
+    byReason[rc] = byReason[rc] || {count:0};
+    byReason[rc].count++;
+    const ac = r.accountability || 'Not stated';
+    byAccountability[ac] = byAccountability[ac] || {count:0};
+    byAccountability[ac].count++;
+  });
+  return { rows, byReason, byAccountability, complaints, cancellations, totalRows: rows.length };
+}
+
+let charts = {};
+function makeChart(id, cfg){
+  const ctx = document.getElementById(id);
+  if(!ctx) return;
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, cfg);
+}
+Chart.defaults.font.family = "'Barlow', sans-serif";
+Chart.defaults.color = '#5b5852';
+
+const TAB_META = {
+  overview:{title:'Overview', sub:'Sales funnel, conversion and target performance'},
+  segments:{title:'Segments', sub:'Attachments vs Utility — deals and value'},
+  salespeople:{title:'Salespeople', sub:'Performance and segment mix by person'},
+  uncaptured:{title:'Uncaptured Demand', sub:'Enquiries lost to unavailable stock'},
+  quality:{title:'Quality', sub:'Complaints and cancellations'}
+};
+
+function renderMonthChips(){
+  const wrap = document.getElementById('monthChips');
+  wrap.innerHTML='';
+  availableMonths().forEach(m=>{
+    const b = el(`<button class="chip ${state.months.has(m)?'on':''}">${m}</button>`);
+    b.addEventListener('click', ()=>{
+      if(state.months.has(m)){ if(state.months.size>1) state.months.delete(m); }
+      else state.months.add(m);
+      renderAll();
+    });
+    wrap.appendChild(b);
+  });
+}
+
+function renderTopbar(){
+  document.getElementById('pageTitle').textContent = TAB_META[state.tab].title;
+  document.getElementById('pageSub').textContent = TAB_META[state.tab].sub;
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===state.tab));
+  document.getElementById('viewMonth').classList.toggle('on', state.granularity==='month');
+  document.getElementById('viewQuarter').classList.toggle('on', state.granularity==='quarter');
+}
+
+function renderOverview(container){
+  const months = selectedMonthsSorted();
+  const groups = getGroups();
+  const totals = aggFunnel(months);
+  container.innerHTML = `
+    <div class="grid g4">
+      <div class="kpi"><div class="label">Enquiries</div><div class="value">${fmtNum(totals.enquiries)}</div></div>
+      <div class="kpi"><div class="label">Quotes</div><div class="value">${fmtNum(totals.quotes)}</div></div>
+      <div class="kpi"><div class="label">Orders</div><div class="value">${fmtNum(totals.orders)}</div></div>
+      <div class="kpi"><div class="label">Actual vs Target Orders</div><div class="value">${fmtNum(totals.orders)} / ${fmtNum(totals.target)}</div>
+        <div class="delta ${totals.orders>=totals.target?'pos':'neg'}">${totals.target? fmtPct(safeDiv(totals.orders,totals.target)) : '—'} of target</div></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px;">
+      <div class="card tall"><h3>Sales trend</h3><div class="cap">Enquiries → Quotes → Orders</div><canvas id="chFunnel"></canvas></div>
+      <div class="card tall"><h3>Actual vs Target Orders</h3><div class="cap">Orders placed vs monthly target</div><canvas id="chTarget"></canvas></div>
+    </div>
+    <div class="grid" style="margin-top:16px;">
+      <div class="card tall"><h3>Conversion rates</h3><div class="cap">Enquiry → Quote, Quote → Order, Overall (Enquiry → Order)</div><canvas id="chConv"></canvas></div>
+    </div>
+  `;
+  const labels = groups.map(g=>g.label);
+  const fData = groups.map(g=>aggFunnel(g.months));
+  makeChart('chFunnel', { type:'bar', data:{ labels, datasets:[
+    {label:'Enquiries', data:fData.map(d=>d.enquiries), backgroundColor:COLORS.black},
+    {label:'Quotes', data:fData.map(d=>d.quotes), backgroundColor:COLORS.orange},
+    {label:'Orders', data:fData.map(d=>d.orders), backgroundColor:COLORS.amber},
+  ]}, options:{ responsive:true, plugins:{legend:{position:'bottom'}} } });
+
+  makeChart('chTarget', { type:'bar', data:{ labels, datasets:[
+    {label:'Actual Orders', data:fData.map(d=>d.orders), backgroundColor:COLORS.orange},
+    {label:'Target Orders', data:fData.map(d=>d.target), backgroundColor:'#d8d4cb'},
+  ]}, options:{ responsive:true, plugins:{legend:{position:'bottom'}} } });
+
+  makeChart('chConv', { type:'line', data:{ labels, datasets:[
+    {label:'Enquiry → Quote', data:fData.map(d=>d.enqToQuote), borderColor:COLORS.black, backgroundColor:COLORS.black, tension:.25},
+    {label:'Quote → Order', data:fData.map(d=>d.quoteToOrder), borderColor:COLORS.orange, backgroundColor:COLORS.orange, tension:.25},
+    {label:'Overall', data:fData.map(d=>d.overall), borderColor:COLORS.amber, backgroundColor:COLORS.amber, tension:.25},
+  ]}, options:{ responsive:true, plugins:{legend:{position:'bottom'}}, scales:{ y:{ ticks:{ callback:v=>Math.round(v*100)+'%' } } } } });
+}
+
+function renderSegments(container){
+  const months = selectedMonthsSorted();
+  const groups = getGroups();
+  const totals = aggSegment(months);
+  const totalDeals = totals.Attachments.deals + totals.Utility.deals;
+  const totalValue = totals.Attachments.value + totals.Utility.value;
+  container.innerHTML = `
+    <div class="grid g4">
+      <div class="kpi"><div class="label">Attachments value</div><div class="value">${fmtGBP(totals.Attachments.value)}</div><div class="delta">${totals.Attachments.deals} deals</div></div>
+      <div class="kpi"><div class="label">Utility value</div><div class="value">${fmtGBP(totals.Utility.value)}</div><div class="delta">${totals.Utility.deals} deals</div></div>
+      <div class="kpi"><div class="label">Total value</div><div class="value">${fmtGBP(totalValue)}</div></div>
+      <div class="kpi"><div class="label">Attachments share of value</div><div class="value">${fmtPct(safeDiv(totals.Attachments.value,totalValue))}</div></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px;">
+      <div class="card tall"><h3>Deals by segment</h3><div class="cap">Count of deals, Attachments vs Utility</div><canvas id="chSegDeals"></canvas></div>
+      <div class="card tall"><h3>Value by segment</h3><div class="cap">£ value, Attachments vs Utility</div><canvas id="chSegValue"></canvas></div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3>Segment breakdown</h3><div class="cap">By ${state.granularity==='month'?'month':'quarter'}</div>
+      <div class="scroll-x"><table><thead><tr><th>${state.granularity==='month'?'Month':'Quarter'}</th><th>Segment</th><th class="num">Deals</th><th class="num">Value</th><th class="num">% of deals</th><th class="num">% of value</th></tr></thead><tbody>
+      ${groups.map(g=>{
+        const s = aggSegment(g.months);
+        const gd = s.Attachments.deals+s.Utility.deals, gv = s.Attachments.value+s.Utility.value;
+        return ['Attachments','Utility'].map(seg=>`<tr><td>${g.label}</td><td><span class="tag ${seg==='Attachments'?'att':'util'}">${seg}</span></td>
+          <td class="num">${fmtNum(s[seg].deals)}</td><td class="num">${fmtGBP(s[seg].value)}</td>
+          <td class="num">${fmtPct(safeDiv(s[seg].deals,gd))}</td><td class="num">${fmtPct(safeDiv(s[seg].value,gv))}</td></tr>`).join('');
+      }).join('')}
+      </tbody></table></div>
+    </div>
+  `;
+  const labels = groups.map(g=>g.label);
+  const segData = groups.map(g=>aggSegment(g.months));
+  makeChart('chSegDeals', { type:'bar', data:{ labels, datasets:[
+    {label:'Attachments', data:segData.map(d=>d.Attachments.deals), backgroundColor:COLORS.orange},
+    {label:'Utility', data:segData.map(d=>d.Utility.deals), backgroundColor:COLORS.amber},
+  ]}, options:{ responsive:true, plugins:{legend:{position:'bottom'}}, scales:{x:{stacked:true},y:{stacked:true}} } });
+  makeChart('chSegValue', { type:'bar', data:{ labels, datasets:[
+    {label:'Attachments', data:segData.map(d=>d.Attachments.value), backgroundColor:COLORS.black},
+    {label:'Utility', data:segData.map(d=>d.Utility.value), backgroundColor:'#c9c5bc'},
+  ]}, options:{ responsive:true, plugins:{legend:{position:'bottom'}}, scales:{x:{stacked:true},y:{stacked:true}} } });
+}
+
+function renderSalespeople(container){
+  const months = selectedMonthsSorted();
+  const groups = getGroups();
+  const people = aggSalespeople(months);
+  const personList = Object.keys(people).sort();
+  const bySeg = aggSegmentByPerson(months);
+
+  container.innerHTML = `
+    <div class="card tall"><h3>Overall performance by person</h3><div class="cap">Orders won ÷ Enquiries received, averaged across the selected ${state.granularity==='month'?'months':'quarters'}</div><canvas id="chPeople"></canvas></div>
+    <div class="grid g2" style="margin-top:16px;">
+      <div class="card">
+        <h3>Conversion & waste</h3><div class="cap">Aggregated over selected period</div>
+        <div class="scroll-x"><table><thead><tr><th>Person</th><th class="num">Enq→Quote</th><th class="num">Quote→Order</th><th class="num">Overall</th><th class="num">Gaps (Enq→Quote)</th><th class="num">Gaps (Quote→Order)</th><th class="num">£ wasted</th><th class="num">% of total wasted</th></tr></thead><tbody>
+        ${(()=>{ const totalWasted = personList.reduce((a,p)=>a+(people[p].wasted||0),0); return personList.map(p=>{ const d=people[p]; return `<tr><td>${p}</td><td class="num">${fmtPct(d.enqToQuoteAvg)}</td><td class="num">${fmtPct(d.quoteToOrderAvg)}</td><td class="num">${fmtPct(d.overallAvg)}</td><td class="num">${fmtNum(d.gapsEQ)}</td><td class="num">${fmtNum(d.gapsQO)}</td><td class="num">${fmtGBP(d.wasted)}</td><td class="num">${fmtPct(safeDiv(d.wasted,totalWasted))}</td></tr>`; }).join(''); })()}
+        </tbody></table></div>
+      </div>
+      <div class="card">
+        <h3>Segment mix by person</h3><div class="cap">Deals and value, Attachments vs Utility</div>
+        <div class="scroll-x"><table><thead><tr><th>Person</th><th class="num">Att. deals</th><th class="num">Att. value</th><th class="num">Util. deals</th><th class="num">Util. value</th><th class="num">% Attachments (deals)</th><th class="num">% Attachments (value)</th></tr></thead><tbody>
+        ${Object.keys(bySeg).sort().map(p=>{ const d=bySeg[p]; const dTot=d.Attachments.deals+d.Utility.deals, vTot=d.Attachments.value+d.Utility.value; return `<tr><td>${p}</td><td class="num">${fmtNum(d.Attachments.deals)}</td><td class="num">${fmtGBP(d.Attachments.value)}</td><td class="num">${fmtNum(d.Utility.deals)}</td><td class="num">${fmtGBP(d.Utility.value)}</td><td class="num">${fmtPct(safeDiv(d.Attachments.deals,dTot))}</td><td class="num">${fmtPct(safeDiv(d.Attachments.value,vTot))}</td></tr>`; }).join('')}
+        </tbody></table></div>
+      </div>
+    </div>
+  `;
+  const labels = groups.map(g=>g.label);
+  const peoplePerGroup = groups.map(g=>aggSalespeople(g.months));
+  const allPeople = new Set(); peoplePerGroup.forEach(pg=>Object.keys(pg).forEach(p=>allPeople.add(p)));
+  const ppl = Array.from(allPeople).sort();
+  makeChart('chPeople', { type:'bar', data:{ labels, datasets: ppl.map((p,i)=>({
+      label:p, data: peoplePerGroup.map(pg=> pg[p]? pg[p].overallAvg : null), backgroundColor: PEOPLE_PALETTE[i%PEOPLE_PALETTE.length]
+    })) }, options:{ responsive:true, plugins:{legend:{position:'bottom'}}, scales:{ y:{ ticks:{ callback:v=>Math.round(v*100)+'%' } } } } });
+}
+
+function renderUncaptured(container){
+  const months = selectedMonthsSorted();
+  const groups = getGroups();
+  const totals = aggUncaptured(months);
+  container.innerHTML = `
+    <div class="grid g3">
+      <div class="kpi"><div class="label">Lost enquiries</div><div class="value">${fmtNum(totals.totalCount)}</div></div>
+      <div class="kpi"><div class="label">Estimated value lost</div><div class="value">${fmtGBP(totals.totalValue)}</div></div>
+      <div class="kpi"><div class="label">Avg value per lost enquiry</div><div class="value">${fmtGBP(safeDiv(totals.totalValue,totals.totalCount))}</div></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px;">
+      <div class="card tall"><h3>Lost enquiries over time</h3><div class="cap">Count by ${state.granularity==='month'?'month':'quarter'}</div><canvas id="chUncCount"></canvas></div>
+      <div class="card tall"><h3>Value lost over time</h3><div class="cap">Estimated £ value by ${state.granularity==='month'?'month':'quarter'}</div><canvas id="chUncValue"></canvas></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px;">
+      <div class="card"><h3>By salesperson</h3><div class="scroll-x"><table><thead><tr><th>Person</th><th class="num">Count</th><th class="num">% of count</th><th class="num">Value</th><th class="num">% of value</th></tr></thead><tbody>
+      ${Object.entries(totals.byPerson).sort((a,b)=>b[1].value-a[1].value).map(([p,d])=>`<tr><td>${p}</td><td class="num">${fmtNum(d.count)}</td><td class="num">${fmtPct(safeDiv(d.count,totals.totalCount))}</td><td class="num">${fmtGBP(d.value)}</td><td class="num">${fmtPct(safeDiv(d.value,totals.totalValue))}</td></tr>`).join('')}
+      </tbody></table></div></div>
+      <div class="card"><h3>By reason</h3><div class="scroll-x"><table><thead><tr><th>Reason</th><th class="num">Count</th><th class="num">% of count</th><th class="num">Value</th><th class="num">% of value</th></tr></thead><tbody>
+      ${Object.entries(totals.byReason).sort((a,b)=>b[1].value-a[1].value).map(([r,d])=>`<tr><td>${r}</td><td class="num">${fmtNum(d.count)}</td><td class="num">${fmtPct(safeDiv(d.count,totals.totalCount))}</td><td class="num">${fmtGBP(d.value)}</td><td class="num">${fmtPct(safeDiv(d.value,totals.totalValue))}</td></tr>`).join('')}
+      </tbody></table></div></div>
+    </div>
+    <div class="card" style="margin-top:16px;"><h3>Log</h3><div class="cap">${totals.rows.length} entries in the selected period</div>
+      <div class="scroll-x" style="max-height:320px; overflow-y:auto;"><table><thead><tr><th>Date</th><th>Salesperson</th><th>Product</th><th>Reason</th><th class="num">Value</th></tr></thead><tbody>
+      ${totals.rows.length ? totals.rows.map(r=>`<tr><td>${r.date||''}</td><td>${r.salesperson||''}</td><td>${r.product||''}</td><td>${r.reason||'—'}</td><td class="num">${fmtGBP(r.value)}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">No entries in this period</td></tr>'}
+      </tbody></table></div>
+    </div>
+  `;
+  const labels = groups.map(g=>g.label);
+  const gData = groups.map(g=>aggUncaptured(g.months));
+  makeChart('chUncCount', { type:'bar', data:{ labels, datasets:[{label:'Lost enquiries', data:gData.map(d=>d.totalCount), backgroundColor:COLORS.orange}]}, options:{ responsive:true, plugins:{legend:{display:false}} } });
+  makeChart('chUncValue', { type:'bar', data:{ labels, datasets:[{label:'Value lost', data:gData.map(d=>d.totalValue), backgroundColor:COLORS.black}]}, options:{ responsive:true, plugins:{legend:{display:false}} } });
+}
+
+function renderQuality(container){
+  const months = selectedMonthsSorted();
+  const groups = getGroups();
+  const totals = aggQuality(months);
+  container.innerHTML = `
+    <div class="grid g3">
+      <div class="kpi"><div class="label">Complaints</div><div class="value">${fmtNum(totals.complaints)}</div></div>
+      <div class="kpi"><div class="label">Cancellations</div><div class="value">${fmtNum(totals.cancellations)}</div></div>
+      <div class="kpi"><div class="label">Logged incidents</div><div class="value">${fmtNum(totals.totalRows)}</div></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px;">
+      <div class="card tall"><h3>Complaints over time</h3><div class="cap">By ${state.granularity==='month'?'month':'quarter'}</div><canvas id="chQualTrend"></canvas></div>
+      <div class="card"><h3>By reason category</h3><div class="scroll-x"><table><thead><tr><th>Reason</th><th class="num">Count</th><th class="num">%</th></tr></thead><tbody>
+      ${Object.entries(totals.byReason).sort((a,b)=>b[1].count-a[1].count).map(([r,d])=>`<tr><td>${r}</td><td class="num">${fmtNum(d.count)}</td><td class="num">${fmtPct(safeDiv(d.count,totals.totalRows))}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No entries</td></tr>'}
+      </tbody></table></div></div>
+    </div>
+    <div class="grid g2" style="margin-top:16px;">
+      <div class="card"><h3>By accountability</h3><div class="scroll-x"><table><thead><tr><th>Accountable party</th><th class="num">Count</th><th class="num">%</th></tr></thead><tbody>
+      ${Object.entries(totals.byAccountability).sort((a,b)=>b[1].count-a[1].count).map(([r,d])=>`<tr><td>${r}</td><td class="num">${fmtNum(d.count)}</td><td class="num">${fmtPct(safeDiv(d.count,totals.totalRows))}</td></tr>`).join('') || '<tr><td colspan="3" class="empty">No entries</td></tr>'}
+      </tbody></table></div></div>
+      <div class="card"><h3>Log</h3><div class="cap">${totals.rows.length} entries in the selected period</div>
+      <div class="scroll-x" style="max-height:230px; overflow-y:auto;"><table><thead><tr><th>Date</th><th>Salesperson</th><th>Product</th><th>Issue</th><th>Reason</th><th>Action</th></tr></thead><tbody>
+      ${totals.rows.length ? totals.rows.map(r=>`<tr><td>${r.date||''}</td><td>${r.salesperson||''}</td><td>${r.product||''}</td><td>${r.issue||(r.complaints?'Complaint':(r.cancellation==='Yes'?'Cancellation':'—'))}</td><td>${r.reason_category||'—'}</td><td>${r.action_taken||'—'}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">No entries in this period</td></tr>'}
+      </tbody></table></div>
+      </div>
+    </div>
+  `;
+  const labels = groups.map(g=>g.label);
+  const gData = groups.map(g=>aggQuality(g.months));
+  makeChart('chQualTrend', { type:'line', data:{ labels, datasets:[
+    {label:'Complaints', data:gData.map(d=>d.complaints), borderColor:COLORS.orange, backgroundColor:COLORS.orange, tension:.2},
+    {label:'Cancellations', data:gData.map(d=>d.cancellations), borderColor:COLORS.black, backgroundColor:COLORS.black, tension:.2},
+  ]}, options:{ responsive:true, plugins:{legend:{position:'bottom'}} } });
+}
+
+function renderAll(){
+  renderMonthChips();
+  renderTopbar();
+  const panels = document.getElementById('panels');
+  panels.innerHTML = '<div id="tabhost"></div>';
+  const host = document.getElementById('tabhost');
+  if(state.tab==='overview') renderOverview(host);
+  else if(state.tab==='segments') renderSegments(host);
+  else if(state.tab==='salespeople') renderSalespeople(host);
+  else if(state.tab==='uncaptured') renderUncaptured(host);
+  else if(state.tab==='quality') renderQuality(host);
+}
+
+document.querySelectorAll('#nav button').forEach(b=>{
+  b.addEventListener('click', ()=>{ state.tab=b.dataset.tab; renderAll(); });
+});
+document.getElementById('viewMonth').addEventListener('click', ()=>{ state.granularity='month'; renderAll(); });
+document.getElementById('viewQuarter').addEventListener('click', ()=>{ state.granularity='quarter'; renderAll(); });
+
+renderAll();
+
+const DASH_YEAR = 2026;
+const FIREBASE_CONFIG = { apiKey:'AIzaSyD4zsBjc76jjFLaIxvlD1ezliPsb7Y36us', authDomain:'hardlife-sales-dashboard.firebaseapp.com', projectId:'hardlife-sales-dashboard', storageBucket:'hardlife-sales-dashboard.firebasestorage.app', messagingSenderId:'346126819406', appId:'1:346126819406:web:89c37ae79b67da75eda31f' };
+const STORE_COLLECTION = 'dashboards';
+const STORE_DOC = 'sales2026';
+const LOCAL_KEY = 'hardlife_sales_2026';
+
+const NAME_ALIAS = {
+  'chris ellmer':'CJ', 'cj ellmer':'CJ', 'cj':'CJ',
+  'cb':'Chris', 'chris bull':'Chris', 'chris':'Chris',
+  'jo':'Josh', 'josh':'Josh',
+  'sr':'Soukaina', 'soukaina':'Soukaina',
+  'ob':'Owen', 'owen':'Owen',
+  'marcelo':'Marcelo'
+};
+function canonName(n){
+  if(typeof n !== 'string') return n;
+  const t = n.trim();
+  if(!t) return null;
+  return NAME_ALIAS[t.toLowerCase()] || t;
+}
+
+const MONTH_NAME_MAP = {
+  jan:'Jan', january:'Jan', feb:'Feb', february:'Feb', mar:'Mar', march:'Mar',
+  apr:'Apr', april:'Apr', may:'May', jun:'Jun', june:'Jun', jul:'Jul', july:'Jul',
+  aug:'Aug', august:'Aug', sep:'Sep', sept:'Sep', september:'Sep',
+  oct:'Oct', october:'Oct', nov:'Nov', november:'Nov', dec:'Dec', december:'Dec'
+};
+function detectMonthKey(sheetName){
+  const m = String(sheetName).trim().match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if(!m) return null;
+  if(parseInt(m[2],10) !== DASH_YEAR) return null;
+  return MONTH_NAME_MAP[m[1].toLowerCase()] || null;
+}
+function isNum(v){ return typeof v === 'number' && !isNaN(v); }
+const DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+function isDateish(v){
+  if(v instanceof Date) return true;
+  if(typeof v === 'string' && DATE_RE.test(v.trim())) return true;
+  return false;
+}
+function fmtDate(v){
+  if(v instanceof Date){
+    const y = v.getFullYear(), mo = String(v.getMonth()+1).padStart(2,'0'), d = String(v.getDate()).padStart(2,'0');
+    return `${y}-${mo}-${d}`;
+  }
+  if(typeof v === 'string' && DATE_RE.test(v.trim())){
+    const [d,m,y] = v.trim().split('/'); return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  return null;
+}
+function cleanText(v){
+  if(v == null) return null;
+  const t = String(v).trim();
+  return t ? t : null;
+}
+function findCell(grid, text){
+  const t = text.toLowerCase();
+  for(let r=0;r<grid.length;r++){
+    for(let c=0;c<(grid[r]?grid[r].length:0);c++){
+      const v = grid[r][c];
+      if(typeof v==='string' && v.toLowerCase().includes(t)) return [r,c];
+    }
+  }
+  return [null,null];
+}
+function headerMap(row, from, to){
+  const hm = {};
+  for(let ci=from; ci<to; ci++){
+    const v = (row||[])[ci];
+    if(typeof v==='string' && v.trim()) hm[v.trim()] = ci;
+  }
+  return hm;
+}
+
+function parseSheetToMonthData(grid){
+  const entry = { funnel:{}, salesperson_rates:{}, segment_table:{}, uncaptured_demand:[], quality_log:[] };
+  let hrow=null, dcol=null;
+  for(let r=0;r<grid.length;r++){
+    for(let c=0;c<(grid[r]?grid[r].length:0);c++){
+      if(grid[r][c]==='Date' && typeof grid[r][c+1]==='string' && grid[r][c+1].includes('Session')){
+        hrow=r; dcol=c; break;
+      }
+    }
+    if(hrow!==null) break;
+  }
+  if(hrow===null) return entry;
+  const header = grid[hrow];
+  const hmap = {};
+  header.forEach((v,ci)=>{ if(typeof v==='string' && v.trim()) hmap[v.trim()]=ci; });
+  const isTypeB = header[dcol+2]==='Attachments';
+  let monthlyTarget=null;
+  const mtCol = hmap['Monthly Target Orders'];
+  if(mtCol!=null){ for(let r=hrow+1;r<Math.min(hrow+3,grid.length);r++){ if(isNum(grid[r][mtCol])){ monthlyTarget=grid[r][mtCol]; break; } } }
+  let sumE=0,sumQ=0,sumO=0, blanks=0, r=hrow+1, days=0;
+  while(r<grid.length){
+    const row = grid[r]||[];
+    const dval = row[dcol];
+    if(typeof dval==='string' && dval.trim()==='Date') break;
+    if(isDateish(dval)){
+      blanks=0; days++;
+      if(!isTypeB){
+        const ecol=hmap['Enquiries'], gcol=hmap['Quotes'], icol=hmap['Orders'];
+        if(isNum(row[ecol])) sumE+=row[ecol];
+        if(isNum(row[gcol])) sumQ+=row[gcol];
+        if(isNum(row[icol])) sumO+=row[icol];
+      } else {
+        [dcol+2,dcol+3].forEach(cc=>{ if(isNum(row[cc])) sumE+=row[cc]; });
+        [dcol+4,dcol+5].forEach(cc=>{ if(isNum(row[cc])) sumQ+=row[cc]; });
+        [dcol+6,dcol+7].forEach(cc=>{ if(isNum(row[cc])) sumO+=row[cc]; });
+      }
+    } else {
+      blanks++; if(blanks>=3 && days>0) break;
+    }
+    r++; if(r-hrow>45) break;
+  }
+  entry.funnel = { type_b:isTypeB, monthly_target_orders:monthlyTarget, enquiries:sumE, quotes:sumQ, orders:sumO };
+
+  const [er,ec] = findCell(grid, 'enq to quotes');
+  if(er!=null){
+    const nameRow = er-1;
+    for(let ci=ec+1; ci<ec+8; ci++){
+      const v=(grid[nameRow]||[])[ci];
+      if(typeof v==='string' && v.trim() && v.trim()!=='Segment'){
+        const nm = canonName(v);
+        const gv = rr => { const x=(grid[rr]||[])[ci]; return isNum(x)?x:null; };
+        const rec = { enq_to_quotes:gv(er), quotes_to_deals:gv(er+1), overall:gv(er+2), gaps_enq_to_quote:0, gaps_quote_to_order:0, amount_wasted:0 };
+        if(!entry.salesperson_rates[nm]) entry.salesperson_rates[nm] = rec;
+        else ['enq_to_quotes','quotes_to_deals','overall'].forEach(k=>{ if(entry.salesperson_rates[nm][k]==null) entry.salesperson_rates[nm][k]=rec[k]; });
+      }
+    }
+    const [gr,gc] = findCell(grid, 'gaps enq to quote');
+    if(gr!=null){
+      const gnameRow = gr-1;
+      for(let ci=gc+1; ci<gc+8; ci++){
+        const v=(grid[gnameRow]||[])[ci];
+        if(typeof v==='string' && v.trim()){
+          const nm = canonName(v);
+          const gv = rr => { const x=(grid[rr]||[])[ci]; return isNum(x)?x:0; };
+          if(!entry.salesperson_rates[nm]) entry.salesperson_rates[nm] = {enq_to_quotes:null,quotes_to_deals:null,overall:null,gaps_enq_to_quote:0,gaps_quote_to_order:0,amount_wasted:0};
+          entry.salesperson_rates[nm].gaps_enq_to_quote += gv(gr);
+          entry.salesperson_rates[nm].gaps_quote_to_order += gv(gr+1);
+          entry.salesperson_rates[nm].amount_wasted += gv(gr+2);
+        }
+      }
+    }
+  }
+
+  const [sr] = findCell(grid, 'Total deals per Segment');
+  if(sr!=null){
+    const cols = [];
+    (grid[sr]||[]).forEach((v,ci)=>{ if(typeof v==='string' && v.trim()) cols.push([ci, v.trim()]); });
+    const nameCols = cols.filter(([ci,v])=> !v.toLowerCase().includes('value') && !['segment','total deals per segment','total amount per segment'].includes(v.toLowerCase()));
+    const valueCols = cols.filter(([ci,v])=> v.toLowerCase().includes('value'));
+    const pairs = nameCols.map((nc,i)=>[nc, valueCols[i]]).filter(p=>p[1]);
+    const segCol = cols.length?cols[0][0]:0;
+    for(let off=1; off<6; off++){
+      const rr = sr+off; if(rr>=grid.length) break;
+      const segname = (grid[rr]||[])[segCol];
+      if(typeof segname==='string' && (segname.trim()==='Attachments'||segname.trim()==='Utility')){
+        const segEntry = {};
+        pairs.forEach(([[nci,nname],[vci]])=>{
+          const nm = canonName(nname);
+          const deals=(grid[rr]||[])[nci], val=(grid[rr]||[])[vci];
+          const rec = { deals:isNum(deals)?deals:0, value:isNum(val)?val:0 };
+          if(!segEntry[nm]) segEntry[nm] = rec;
+          else { segEntry[nm].deals += rec.deals; segEntry[nm].value += rec.value; }
+        });
+        entry.segment_table[segname.trim()] = segEntry;
+      }
+    }
+  }
+
+  const [ur] = findCell(grid, 'Uncaptured Demand');
+  if(ur!=null){
+    const hr = ur+1;
+    const hrow2 = grid[hr]||[];
+    const dateCols = [];
+    hrow2.forEach((v,ci)=>{ if(typeof v==='string' && v.trim()==='Date') dateCols.push(ci); });
+    const u0 = dateCols[0];
+    const q0 = dateCols.length>1 ? dateCols[1] : null;
+    if(u0!=null){
+      const uh = headerMap(hrow2, u0, q0!=null?q0:hrow2.length);
+      let uvcol=null; Object.keys(uh).forEach(k=>{ if(k.includes('Estimated Value')) uvcol=uh[k]; });
+      let rr=hr+1, bl=0, last=null;
+      while(rr<grid.length && bl<6){
+        const row=grid[rr]||[];
+        const dval=row[u0];
+        if(typeof dval==='string' && dval.trim().toLowerCase()==='total') break;
+        const prod = cleanText(row[uh['Product']]);
+        const val = (uvcol!=null && isNum(row[uvcol])) ? row[uvcol] : 0;
+        if(isDateish(dval)){
+          bl=0;
+          const en = uh['Enquiries']!=null && isNum(row[uh['Enquiries']]) ? row[uh['Enquiries']] : 1;
+          last = {
+            date: fmtDate(dval), enquiries: en,
+            salesperson: canonName(row[uh['Sales person']]),
+            product: prod,
+            reason: cleanText(row[uh['Reason']]),
+            value: val
+          };
+          entry.uncaptured_demand.push(last);
+        } else if(last && (prod || val)){
+          bl=0;
+          entry.uncaptured_demand.push({
+            date: last.date, enquiries: 0, salesperson: last.salesperson,
+            product: prod, reason: cleanText(row[uh['Reason']]) || last.reason, value: val
+          });
+        } else bl++;
+        rr++;
+      }
+    }
+    if(q0!=null){
+      const qh = headerMap(hrow2, q0, hrow2.length);
+      let rr=hr+1, bl=0, lastQ=null;
+      while(rr<grid.length && bl<6){
+        const row=grid[rr]||[];
+        const dval=row[q0];
+        if(typeof dval==='string' && dval.trim().toLowerCase()==='total') break;
+        if(isDateish(dval)){
+          bl=0;
+          let canc = row[qh['Cancellations']];
+          if(isNum(canc)) canc = canc>0 ? 'Yes' : 'No';
+          else canc = cleanText(canc);
+          const iss = row[qh['Issue']];
+          lastQ = {
+            date: fmtDate(dval),
+            order_no: cleanText(row[qh['Order No']]),
+            salesperson: canonName(row[qh['Salesperson']]),
+            product: cleanText(row[qh['Product']]),
+            issue: typeof iss==='string' ? cleanText(iss) : null,
+            complaints: isNum(row[qh['Complaints']]) ? row[qh['Complaints']] : 0,
+            cancellation: canc,
+            reason_category: cleanText(row[qh['Reason Category']]),
+            accountability: cleanText(row[qh['Accountability']]),
+            action_taken: cleanText(row[qh['Action Taken']])
+          };
+          entry.quality_log.push(lastQ);
+        } else if(lastQ && !cleanText(row[qh['Order No']]) && (cleanText(row[qh['Product']]) || isNum(row[qh['Complaints']]))){
+          bl=0;
+          const cp = cleanText(row[qh['Product']]);
+          if(cp) lastQ.product = lastQ.product ? lastQ.product + ', ' + cp : cp;
+          if(isNum(row[qh['Complaints']])) lastQ.complaints += row[qh['Complaints']];
+        } else bl++;
+        rr++;
+      }
+    }
+  }
+  return entry;
+}
+
+function fixLogDate(ds, mnum){
+  if(!ds) return ds;
+  const p = ds.split('-');
+  const y = p[0], m = parseInt(p[1],10), d = parseInt(p[2],10);
+  if(m !== mnum && d === mnum){
+    return y + '-' + String(mnum).padStart(2,'0') + '-' + String(m).padStart(2,'0');
+  }
+  return ds;
+}
+
+function parseWorkbookToData(wb){
+  const out = {};
+  wb.SheetNames.forEach(sname=>{
+    const mkey = detectMonthKey(sname);
+    if(!mkey) return;
+    const grid = XLSX.utils.sheet_to_json(wb.Sheets[sname], { header:1, raw:true, defval:null });
+    const parsed = parseSheetToMonthData(grid);
+    if(!parsed.funnel || (!parsed.funnel.enquiries && !parsed.funnel.orders)) return;
+    const mnum = monthIndex(mkey) + 1;
+    parsed.uncaptured_demand.forEach(r=>{ r.date = fixLogDate(r.date, mnum); });
+    parsed.quality_log.forEach(r=>{ r.date = fixLogDate(r.date, mnum); });
+    out[mkey] = { full: sname, quarter: 'Q' + (Math.floor(monthIndex(mkey)/3)+1), ...parsed };
+  });
+  return out;
+}
+
+function setStatus(text){
+  const el2 = document.getElementById('fname');
+  if(el2) el2.textContent = text;
+}
+function fmtStamp(d){
+  return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+}
+
+let storeRef = null;
+let storeReady = false;
+
+function applyStoredData(newData, fileName, stamp){
+  const before = new Set(availableMonths());
+  DATA = newData;
+  availableMonths().forEach(m=>{ if(!before.has(m)) state.months.add(m); });
+  Array.from(state.months).forEach(m=>{ if(!DATA[m]) state.months.delete(m); });
+  if(!state.months.size) availableMonths().forEach(m=>state.months.add(m));
+  const when = stamp ? ' · ' + fmtStamp(stamp) : '';
+  setStatus('Updated' + when + (fileName ? ' · ' + fileName : ''));
+  renderAll();
+}
+
+function saveData(fileName){
+  const payload = JSON.stringify(DATA);
+  if(storeReady && storeRef){
+    return storeRef.set({ payload, fileName, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  }
+  try{ localStorage.setItem(LOCAL_KEY, JSON.stringify({ payload, fileName, savedAt: Date.now() })); }catch(e){}
+  return Promise.resolve();
+}
+
+function initStore(){
+  if(FIREBASE_CONFIG.apiKey && typeof firebase !== 'undefined'){
+    try{
+      firebase.initializeApp(FIREBASE_CONFIG);
+      firebase.auth().signInAnonymously().then(()=>{
+        storeRef = firebase.firestore().collection(STORE_COLLECTION).doc(STORE_DOC);
+        storeReady = true;
+        storeRef.onSnapshot(snap=>{
+          if(snap.exists){
+            const d = snap.data();
+            try{
+              const stamp = d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate() : null;
+              applyStoredData(JSON.parse(d.payload), d.fileName, stamp);
+            }catch(e){}
+          }
+        });
+      }).catch(()=>{ setStatus('Could not connect to shared storage'); });
+      return;
+    }catch(e){}
+  }
+  try{
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      applyStoredData(JSON.parse(s.payload), s.fileName, s.savedAt ? new Date(s.savedAt) : null);
+    }
+  }catch(e){}
+}
+
+document.getElementById('uploadBtn').addEventListener('click', function(){
+  document.getElementById('fileInput').click();
+});
+document.getElementById('fileInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const wb = XLSX.read(evt.target.result, { type:'array', cellDates:true });
+      const parsed = parseWorkbookToData(wb);
+      const months = Object.keys(parsed);
+      if(!months.length){
+        setStatus('No ' + DASH_YEAR + ' month sheets found in ' + file.name);
+        return;
+      }
+      const merged = JSON.parse(JSON.stringify(DATA));
+      months.forEach(m=>{ merged[m] = parsed[m]; });
+      applyStoredData(merged, file.name, new Date());
+      saveData(file.name).catch(()=>{ setStatus('Loaded, but could not save to shared storage'); });
+    } catch(err){
+      setStatus('Could not read file: ' + err.message);
+    }
+    e.target.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+initStore();
+
+</script>
+</body>
+</html>
